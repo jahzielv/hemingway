@@ -21,20 +21,20 @@ enum Cmd {
 #[derive(Debug, Serialize, Deserialize)]
 struct Feed {
     uri: String,
-    last_updated: String,
+    last_accessed: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct FeedList {
+struct ConfigObj {
     feeds: Vec<Feed>,
 }
 
 fn add_feed(feed: &str) {
     let config = fs::read_to_string("./hem.json").expect("reading config failed");
-    let mut my_feeds: FeedList = serde_json::from_str(&config).unwrap();
+    let mut my_feeds: ConfigObj = serde_json::from_str(&config).unwrap();
     my_feeds.feeds.push(Feed {
         uri: feed.to_owned(),
-        last_updated: "hello".to_owned(),
+        last_accessed: "hello".to_owned(),
     });
     let mut file = match File::create("hem.json") {
         Err(why) => panic!("config file access failed: {}", why),
@@ -47,6 +47,10 @@ fn add_feed(feed: &str) {
     };
 }
 
+// access feeds
+// if feed has been updated since last access (stored in config), then display 5 newest items
+// else display "Nothing new"
+// update last_access date in config
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::from_args();
@@ -54,9 +58,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match args.add_cmd {
         None => {
             let config = fs::read_to_string("./hem.json").expect("reading config failed");
-            let my_feeds: FeedList = serde_json::from_str(&config)?;
+            let config_obj: ConfigObj = serde_json::from_str(&config)?;
             // let resp = reqwest::get(&args.feed).await?.text().await?;
-            for f in my_feeds.feeds {
+            for f in config_obj.feeds {
                 let resp = reqwest::get(&f.uri).await?.text().await?;
                 let feed = parser::parse(resp.as_bytes()).unwrap();
                 println!("{}", feed.title.unwrap().content);
@@ -65,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let entries = &feed.entries;
                 for (i, e) in entries.iter().enumerate() {
                     if i < 5 {
-                        println!("\t{}", e.title.as_ref().unwrap().content);
+                        println!("\t{} : {}", e.title.as_ref().unwrap().content, e.id);
                     }
                 }
             }
