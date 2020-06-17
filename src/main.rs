@@ -1,7 +1,10 @@
 use structopt::StructOpt;
 // use rss::Channel;
+// use feed_rs::model::Feed;
+// use feed_rs::model;
 use feed_rs::parser;
 // use serde_json::Value;
+use hemlib::ProcessedFeed;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
@@ -47,6 +50,44 @@ fn add_feed(feed: &str) {
     };
 }
 
+async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Error>> {
+    let mut processed: Vec<ProcessedFeed> = Vec::new(); //.into_iter().enumerate().map(|(i, e)| {println!("hello"); (i, e)}).collect();
+    let config = fs::read_to_string("./hem.json").expect("reading config failed");
+    let config_obj: ConfigObj = serde_json::from_str(&config)?;
+    // let mut feed: model::Feed;
+    // let resp = reqwest::get(&args.feed).await?.text().await?;
+    for f in config_obj.feeds.iter() {
+        let resp = reqwest::get(&f.uri).await?.text().await?;
+        let feed = parser::parse(resp.as_bytes()).unwrap();
+        let procfeed = {
+            // let feedref = &feed;
+            let title = feed.title.unwrap();
+            let title_owned = title.content.to_owned();
+
+            // println!("{}", feed.title.unwrap().content);
+            // let y = &x.content.as_ref().unwrap();
+            // println!("{:?}", x.title.as_ref().unwrap());
+            let entries = feed.entries.iter().enumerate();
+            let mut it = Vec::<String>::new();
+            for (j, e) in entries {
+                if j < 5 {
+                    // println!("\t{} : {}", e.title.as_ref().unwrap().content, e.id);
+                    let et = e.title.as_ref().unwrap();
+                    it.push(format!("{} 🔗 {}", et.content.clone(), e.id));
+                }
+            }
+
+            ProcessedFeed {
+                title: title_owned,
+                items: it,
+            }
+        };
+        processed.push(procfeed);
+        // println!("{:?}", processed);
+    }
+    Ok(processed)
+}
+
 // access feeds
 // if feed has been updated since last access (stored in config), then display 5 newest items
 // else display "Nothing new"
@@ -57,22 +98,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // println!("{:?}", args);
     match args.add_cmd {
         None => {
-            let config = fs::read_to_string("./hem.json").expect("reading config failed");
-            let config_obj: ConfigObj = serde_json::from_str(&config)?;
-            // let resp = reqwest::get(&args.feed).await?.text().await?;
-            for f in config_obj.feeds {
-                let resp = reqwest::get(&f.uri).await?.text().await?;
-                let feed = parser::parse(resp.as_bytes()).unwrap();
-                println!("{}", feed.title.unwrap().content);
-                // let y = &x.content.as_ref().unwrap();
-                // println!("{:?}", x.title.as_ref().unwrap());
-                let entries = &feed.entries;
-                for (i, e) in entries.iter().enumerate() {
-                    if i < 5 {
-                        println!("\t{} : {}", e.title.as_ref().unwrap().content, e.id);
-                    }
-                }
+            let processed = process_feed().await?;
+            for e in processed {
+                println!("{}", e);
             }
+            // println!("{}", processed.unwrap());
             None
         }
         Some(i) => {
