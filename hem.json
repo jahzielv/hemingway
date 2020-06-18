@@ -1,13 +1,1 @@
-{
-    "feeds": [
-        {
-            "uri": "https://jvns.ca/atom.xml",
-            "last_accessed": "2020-06-14T09:18:26+00:00"
-        },
-        {
-            "uri": "https://fasterthanli.me/index.xml",
-            "last_accessed": "2020-06-14T09:18:26+00:00"
-        },
-        { "uri": "https://zinascii.com/writing-feed.xml", "last_accessed": "hello" }
-    ]
-}
+{"feeds":[{"uri":"https://jvns.ca/atom.xml","last_accessed":"hello"}]}

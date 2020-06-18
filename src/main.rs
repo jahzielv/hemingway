@@ -1,14 +1,13 @@
-use structopt::StructOpt;
-// use rss::Channel;
-// use feed_rs::model::Feed;
-// use feed_rs::model;
 use feed_rs::parser;
-// use serde_json::Value;
 use hemlib::ProcessedFeed;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
+use std::io::BufReader;
+use std::io::Read;
 use std::io::Write;
+use std::path::Path;
+use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Hemingway", about = "a small RSS reader")]
@@ -33,13 +32,15 @@ struct ConfigObj {
 }
 
 fn add_feed(feed: &str) {
-    let config = fs::read_to_string("./hem.json").expect("reading config failed");
+    let homedir: std::path::PathBuf = dirs::home_dir().expect("no home dir");
+    let path_to_config: &Path = &Path::new(&homedir).join(".hemrc");
+    let config = fs::read_to_string(path_to_config).expect("reading config failed");
     let mut my_feeds: ConfigObj = serde_json::from_str(&config).unwrap();
     my_feeds.feeds.push(Feed {
         uri: feed.to_owned(),
         last_accessed: "hello".to_owned(),
     });
-    let mut file = match File::create("hem.json") {
+    let mut file = match File::create(path_to_config) {
         Err(why) => panic!("config file access failed: {}", why),
         Ok(file) => file,
     };
@@ -52,10 +53,47 @@ fn add_feed(feed: &str) {
 
 async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Error>> {
     let mut processed: Vec<ProcessedFeed> = Vec::new(); //.into_iter().enumerate().map(|(i, e)| {println!("hello"); (i, e)}).collect();
-    let config = fs::read_to_string("./hem.json").expect("reading config failed");
+                                                        // let configdir: std::path::PathBuf = match config_dir() {
+                                                        //     None => return Err(Box::from("no config dir")),
+                                                        //     Some(configdir) => {
+                                                        //         println!("{:?}", configdir);
+                                                        //         configdir
+                                                        //     }
+                                                        // };
+    let homedir: std::path::PathBuf = match dirs::home_dir() {
+        None => return Err(Box::from("You need a home directory...")),
+        Some(homedir) => homedir,
+    };
+    let path_to_config: &Path = &Path::new(&homedir).join(".hemrc");
+    let config = match fs::read_to_string(path_to_config) {
+        Ok(config) => config,
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                eprintln!("Didn't find a .hemrc, creating it now...");
+                // create the file and populate it with  an empty array
+                let mut configfile = fs::OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .create_new(true)
+                    .open(path_to_config)?;
+                configfile.write_all(r#"{"feeds": []}"#.as_bytes())?;
+                let mut bufreader = BufReader::new(configfile);
+                let mut contents = String::new();
+                bufreader.read_to_string(&mut contents)?;
+                contents
+            } else {
+                return Err(Box::from("Catastrophe!"));
+            }
+        }
+    };
     let config_obj: ConfigObj = serde_json::from_str(&config)?;
     // let mut feed: model::Feed;
     // let resp = reqwest::get(&args.feed).await?.text().await?;
+    if config_obj.feeds.len() == 0 {
+        return Err(Box::from(
+            "Your feeds list is empty! use `hem add` to add a feed.",
+        ));
+    }
     for f in config_obj.feeds.iter() {
         let resp = reqwest::get(&f.uri).await?.text().await?;
         let feed = parser::parse(resp.as_bytes()).unwrap();
