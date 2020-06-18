@@ -1,3 +1,5 @@
+use chrono::offset::Utc;
+use chrono::DateTime;
 use feed_rs::parser;
 use hemlib::ProcessedFeed;
 use serde::{Deserialize, Serialize};
@@ -38,7 +40,7 @@ fn add_feed(feed: &str) {
     let mut my_feeds: ConfigObj = serde_json::from_str(&config).unwrap();
     my_feeds.feeds.push(Feed {
         uri: feed.to_owned(),
-        last_accessed: "hello".to_owned(),
+        last_accessed: Utc::now().to_rfc3339().to_owned(),
     });
     let mut file = match File::create(path_to_config) {
         Err(why) => panic!("config file access failed: {}", why),
@@ -97,6 +99,11 @@ async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Er
     for f in config_obj.feeds.iter() {
         let resp = reqwest::get(&f.uri).await?.text().await?;
         let feed = parser::parse(resp.as_bytes()).unwrap();
+        println!("feed updated: {:?}", feed.updated);
+        let last_accessed = DateTime::from(DateTime::parse_from_rfc3339(&f.last_accessed).unwrap());
+        let duration = last_accessed - feed.updated.unwrap(); //last_accessed.duration_since(feed.updated);
+        println!("duration: {:?}", duration.num_days());
+        // if duration.num_days() > 0
         let procfeed = {
             // let feedref = &feed;
             let title = feed.title.unwrap();
@@ -109,6 +116,7 @@ async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Er
             let mut it = Vec::<String>::new();
             for (j, e) in entries {
                 if j < 5 {
+                    println!("{:?}", e.updated);
                     // println!("\t{} : {}", e.title.as_ref().unwrap().content, e.id);
                     let et = e.title.as_ref().unwrap();
                     it.push(format!("{} 🔗 {}", et.content.clone(), e.id));
