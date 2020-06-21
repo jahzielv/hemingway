@@ -1,6 +1,6 @@
 [package]
 name = "hemingway"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Jahziel Villasana <jahzielv@gmail.com>"]
 edition = "2018"
 readme = "README.md"
