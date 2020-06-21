@@ -20,7 +20,7 @@ $ hem
 
 > 👉 Heads up! This will create a `.hemrc` in your home folder if the file doesn't exist (ie you're running Hemingway for the first time).
 
-### Display 5 newest articles
+### Display 5 newest articles from all your feeds
 
 ```bash
 $ hem top5
