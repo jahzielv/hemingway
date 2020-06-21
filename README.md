@@ -1,6 +1,6 @@
 # Hemingway
 
-A small terminal RSS reader. I needed an RSS feed reader and I'm learning Rust, so I decided to build one myself. Hemingway aims to be minimal and easy to use.
+An economical RSS reader for your terminal. I needed an RSS feed reader and I'm learning Rust, so I decided to build one myself. Hemingway aims to be minimal and easy to use.
 
 ## Misc.
 

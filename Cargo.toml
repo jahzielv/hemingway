@@ -9,7 +9,7 @@ repository = "https://github.com/jahzielv/hemingway"
 keywords = ["cli", "RSS", "reader"]
 categories = ["command-line-utilities"]
 license = "MIT"
-description = "A small terminal RSS reader."
+description = "An economical RSS reader for your terminal."
 
 
 [lib]

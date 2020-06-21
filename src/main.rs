@@ -12,7 +12,10 @@ use std::path::Path;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "Hemingway", about = "a small terminal RSS reader")]
+#[structopt(
+    name = "Hemingway",
+    about = "An economical RSS reader for your terminal."
+)]
 struct Cli {
     #[structopt(subcommand)]
     sub_cmd: Option<Cmd>,
