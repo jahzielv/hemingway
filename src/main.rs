@@ -61,11 +61,11 @@ fn rust_to_config(content: &[u8]) {
 
 fn add_feed(feed: &str) {
     let mut my_feeds: ConfigObj = config_to_rust();
-    rust_to_config(serde_json::to_string(&my_feeds).unwrap().as_bytes());
     my_feeds.feeds.push(Feed {
         uri: feed.to_owned(),
         last_accessed: Utc::now().to_rfc3339().to_owned(),
     });
+    rust_to_config(serde_json::to_string(&my_feeds).unwrap().as_bytes());
 }
 
 async fn top5<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Error>> {
