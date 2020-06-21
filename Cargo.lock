@@ -340,7 +340,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "hem"
+name = "hemingway"
 version = "0.1.0"
 dependencies = [
  "chrono",
