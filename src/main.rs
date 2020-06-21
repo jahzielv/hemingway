@@ -86,12 +86,15 @@ async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Er
             }
         }
     };
-    let mut config_obj: ConfigObj = serde_json::from_str(&config)?;
-    if config_obj.feeds.len() == 0 {
-        return Err(Box::from(
-            "Your feeds list is empty! use `hem add` to add a feed.",
-        ));
-    }
+    let mut config_obj: ConfigObj = match serde_json::from_str(&config) {
+        Ok(config_obj) => config_obj,
+        Err(_) => {
+            return Err(Box::from(
+                "Your feeds list is empty! use `hem add` to add a feed.",
+            ))
+        }
+    };
+
     for i in 0..config_obj.feeds.len() {
         let resp = reqwest::get(&config_obj.feeds[i].uri).await?.text().await?;
         let feed = parser::parse(resp.as_bytes()).unwrap();
@@ -99,8 +102,9 @@ async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Er
             DateTime::parse_from_rfc3339(&config_obj.feeds[i].last_accessed).unwrap(),
         );
         let duration = last_accessed - feed.updated.unwrap();
-        if duration.num_days() > 0 {
+        if duration.num_seconds() > 0 {
             println!("{}: Nothing new here...", feed.title.unwrap().content);
+            config_obj.feeds[i].last_accessed = Utc::now().to_rfc3339().to_owned();
             continue;
         }
         let procfeed = {
@@ -110,7 +114,8 @@ async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Er
             let entries = feed.entries.iter().enumerate();
             let mut it = Vec::<String>::new();
             for (j, e) in entries {
-                if j < 5 {
+                let entry_duration = last_accessed - e.updated.unwrap();
+                if j < 5 && entry_duration.num_seconds() < 0 {
                     let e_title = e.title.as_ref().unwrap();
                     it.push(format!("{} 🔗{}", e_title.content.clone(), e.id));
                 }
