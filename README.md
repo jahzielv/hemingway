@@ -2,6 +2,10 @@
 
 A small terminal RSS reader. I needed an RSS feed reader and I'm learning Rust, so I decided to build one myself. Hemingway aims to be minimal and easy to use.
 
+## Misc.
+
+Hemingway stores your feeds list in a `.hemrc` file in your home directory. This file is in JSON format, mostly because it's easy to work with. Hemingway will create the `.hemrc` file the first time you run it.
+
 ## Installation
 
 ```bash
