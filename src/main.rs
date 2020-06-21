@@ -33,51 +33,49 @@ struct ConfigObj {
     feeds: Vec<Feed>,
 }
 
-fn add_feed(feed: &str) {
+fn find_config() -> std::path::PathBuf {
     let homedir: std::path::PathBuf = dirs::home_dir().expect("no home dir");
-    let path_to_config: &Path = &Path::new(&homedir).join(".hemrc");
-    let config = fs::read_to_string(path_to_config).expect("reading config failed");
-    let mut my_feeds: ConfigObj = serde_json::from_str(&config).unwrap();
+    //let path_to_config: &Path =
+    Path::new(&homedir).join(".hemrc")
+}
+
+fn config_to_rust() -> ConfigObj {
+    let config = fs::read_to_string(&find_config()).expect("reading config failed");
+    serde_json::from_str(&config).unwrap()
+}
+
+fn rust_to_config(content: &[u8]) {
+    let mut file = match File::create(find_config()) {
+        Err(why) => panic!("config file access failed: {}", why),
+        Ok(file) => file,
+    };
+    file.write_all(content)
+        .expect("Writing to .hemrc failed :(");
+}
+
+fn add_feed(feed: &str) {
+    let mut my_feeds: ConfigObj = config_to_rust();
+    rust_to_config(serde_json::to_string(&my_feeds).unwrap().as_bytes());
     my_feeds.feeds.push(Feed {
         uri: feed.to_owned(),
         last_accessed: Utc::now().to_rfc3339().to_owned(),
     });
-    let mut file = match File::create(path_to_config) {
-        Err(why) => panic!("config file access failed: {}", why),
-        Ok(file) => file,
-    };
-
-    match file.write_all(serde_json::to_string(&my_feeds).unwrap().as_bytes()) {
-        Err(why) => panic!("config file writing failed: {}", why),
-        Ok(_) => println!("feed added"),
-    };
 }
 
 async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Error>> {
-    let mut processed: Vec<ProcessedFeed> = Vec::new(); //.into_iter().enumerate().map(|(i, e)| {println!("hello"); (i, e)}).collect();
-                                                        // let configdir: std::path::PathBuf = match config_dir() {
-                                                        //     None => return Err(Box::from("no config dir")),
-                                                        //     Some(configdir) => {
-                                                        //         println!("{:?}", configdir);
-                                                        //         configdir
-                                                        //     }
-                                                        // };
-    let homedir: std::path::PathBuf = match dirs::home_dir() {
-        None => return Err(Box::from("You need a home directory...")),
-        Some(homedir) => homedir,
-    };
-    let path_to_config: &Path = &Path::new(&homedir).join(".hemrc");
-    let config = match fs::read_to_string(path_to_config) {
+    let config_path = find_config();
+    let mut processed: Vec<ProcessedFeed> = Vec::new();
+    let config = match fs::read_to_string(&config_path) {
         Ok(config) => config,
         Err(e) => {
             if e.kind() == std::io::ErrorKind::NotFound {
                 eprintln!("Didn't find a .hemrc, creating it now...");
-                // create the file and populate it with  an empty array
+                // create the file and populate it with an empty array
                 let mut configfile = fs::OpenOptions::new()
                     .read(true)
                     .write(true)
                     .create_new(true)
-                    .open(path_to_config)?;
+                    .open(&config_path)?;
                 configfile.write_all(r#"{"feeds": []}"#.as_bytes())?;
                 let mut bufreader = BufReader::new(configfile);
                 let mut contents = String::new();
@@ -88,38 +86,33 @@ async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Er
             }
         }
     };
-    let config_obj: ConfigObj = serde_json::from_str(&config)?;
-    // let mut feed: model::Feed;
-    // let resp = reqwest::get(&args.feed).await?.text().await?;
+    let mut config_obj: ConfigObj = serde_json::from_str(&config)?;
     if config_obj.feeds.len() == 0 {
         return Err(Box::from(
             "Your feeds list is empty! use `hem add` to add a feed.",
         ));
     }
-    for f in config_obj.feeds.iter() {
-        let resp = reqwest::get(&f.uri).await?.text().await?;
+    for i in 0..config_obj.feeds.len() {
+        let resp = reqwest::get(&config_obj.feeds[i].uri).await?.text().await?;
         let feed = parser::parse(resp.as_bytes()).unwrap();
-        println!("feed updated: {:?}", feed.updated);
-        let last_accessed = DateTime::from(DateTime::parse_from_rfc3339(&f.last_accessed).unwrap());
-        let duration = last_accessed - feed.updated.unwrap(); //last_accessed.duration_since(feed.updated);
-        println!("duration: {:?}", duration.num_days());
-        // if duration.num_days() > 0
+        let last_accessed = DateTime::from(
+            DateTime::parse_from_rfc3339(&config_obj.feeds[i].last_accessed).unwrap(),
+        );
+        let duration = last_accessed - feed.updated.unwrap();
+        if duration.num_days() > 0 {
+            println!("{}: Nothing new here...", feed.title.unwrap().content);
+            continue;
+        }
         let procfeed = {
-            // let feedref = &feed;
             let title = feed.title.unwrap();
             let title_owned = title.content.to_owned();
 
-            // println!("{}", feed.title.unwrap().content);
-            // let y = &x.content.as_ref().unwrap();
-            // println!("{:?}", x.title.as_ref().unwrap());
             let entries = feed.entries.iter().enumerate();
             let mut it = Vec::<String>::new();
             for (j, e) in entries {
                 if j < 5 {
-                    println!("{:?}", e.updated);
-                    // println!("\t{} : {}", e.title.as_ref().unwrap().content, e.id);
-                    let et = e.title.as_ref().unwrap();
-                    it.push(format!("{} 🔗 {}", et.content.clone(), e.id));
+                    let e_title = e.title.as_ref().unwrap();
+                    it.push(format!("{} 🔗{}", e_title.content.clone(), e.id));
                 }
             }
 
@@ -129,8 +122,9 @@ async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Er
             }
         };
         processed.push(procfeed);
-        // println!("{:?}", processed);
+        config_obj.feeds[i].last_accessed = Utc::now().to_rfc3339().to_owned();
     }
+    rust_to_config(serde_json::to_string(&config_obj).unwrap().as_bytes());
     Ok(processed)
 }
 
@@ -141,14 +135,12 @@ async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Er
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::from_args();
-    // println!("{:?}", args);
     match args.add_cmd {
         None => {
             let processed = process_feed().await?;
             for e in processed {
                 println!("{}", e);
             }
-            // println!("{}", processed.unwrap());
             None
         }
         Some(i) => {
@@ -158,16 +150,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Some(i)
         }
     };
-    // match args {
-    //     // None => None,
-    //     // Some(i) => {
-    //     //     println!("{}", i);
-    //     //     Some(i)
-    //     // }
-    //     Cli::Add => println!("got em"),
-    // };
-    // println!("{}", x.unwrap());
-    // if
 
     Ok(())
 }
