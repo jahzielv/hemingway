@@ -15,12 +15,15 @@ use structopt::StructOpt;
 #[structopt(name = "Hemingway", about = "a small RSS reader")]
 struct Cli {
     #[structopt(subcommand)]
-    add_cmd: Option<Cmd>,
+    sub_cmd: Option<Cmd>,
 }
 #[derive(StructOpt, Debug)]
 enum Cmd {
     /// Adds the feed URL passed to it to your feeds list.
-    Add { feed_url: String },
+    Add {
+        feed_url: String,
+    },
+    Top5,
 }
 #[derive(Debug, Serialize, Deserialize)]
 struct Feed {
@@ -60,6 +63,66 @@ fn add_feed(feed: &str) {
         uri: feed.to_owned(),
         last_accessed: Utc::now().to_rfc3339().to_owned(),
     });
+}
+
+async fn top5<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Error>> {
+    let config_path = find_config();
+    let mut processed: Vec<ProcessedFeed> = Vec::new();
+    let config = match fs::read_to_string(&config_path) {
+        Ok(config) => config,
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                eprintln!("Didn't find a .hemrc, creating it now...");
+                // create the file and populate it with an empty array
+                let mut configfile = fs::OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .create_new(true)
+                    .open(&config_path)?;
+                configfile.write_all(r#"{"feeds": []}"#.as_bytes())?;
+                let mut bufreader = BufReader::new(configfile);
+                let mut contents = String::new();
+                bufreader.read_to_string(&mut contents)?;
+                contents
+            } else {
+                return Err(Box::from("Catastrophe!"));
+            }
+        }
+    };
+    let config_obj: ConfigObj = match serde_json::from_str(&config) {
+        Ok(config_obj) => config_obj,
+        Err(_) => {
+            return Err(Box::from(
+                "Your feeds list is empty! use `hem add` to add a feed.",
+            ))
+        }
+    };
+
+    for i in 0..config_obj.feeds.len() {
+        let resp = reqwest::get(&config_obj.feeds[i].uri).await?.text().await?;
+        let feed = parser::parse(resp.as_bytes()).unwrap();
+        let procfeed = {
+            let title = feed.title.unwrap();
+            let title_owned = title.content.to_owned();
+
+            let entries = feed.entries.iter().enumerate();
+            let mut it = Vec::<String>::new();
+            for (j, e) in entries {
+                if j < 5 {
+                    let e_title = e.title.as_ref().unwrap();
+                    it.push(format!("{} 🔗{}", e_title.content.clone(), e.id));
+                }
+            }
+
+            ProcessedFeed {
+                title: title_owned,
+                items: it,
+            }
+        };
+        processed.push(procfeed);
+    }
+    rust_to_config(serde_json::to_string(&config_obj).unwrap().as_bytes());
+    Ok(processed)
 }
 
 async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Error>> {
@@ -140,7 +203,7 @@ async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Er
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::from_args();
-    match args.add_cmd {
+    match args.sub_cmd {
         None => {
             let processed = process_feed().await?;
             for e in processed {
@@ -151,6 +214,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(i) => {
             match &i {
                 Cmd::Add { feed_url } => add_feed(feed_url),
+                Cmd::Top5 => {
+                    let top5_entries = top5().await?;
+                    for e in top5_entries {
+                        println!("{}", e);
+                    }
+                }
             };
             Some(i)
         }
