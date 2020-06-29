@@ -35,3 +35,10 @@ $ hem top5
 ```bash
 $ hem add https://example.com/feed.xml
 ```
+
+TODO:
+- [ ] add tests
+- [ ] improve UI (maybe show in a grid? maybe have linked titles?)
+- [ ] fix bug where you won't see anything new right after adding a feed
+- [ ] rework `top5`command to take an arg and show that number of posts per feed
+- [ ] make it faster? find a way to benchmark
