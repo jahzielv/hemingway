@@ -1,3 +1,4 @@
+use ansi_term::Style;
 use itertools::Itertools;
 #[derive(Debug)]
 pub struct ProcessedFeed {
@@ -9,8 +10,8 @@ impl std::fmt::Display for ProcessedFeed {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}\n\t{}",
-            self.title,
+            "📖 {}\n\t{}",
+            Style::new().bold().paint(&self.title),
             format!("{}", self.items.iter().format("\n\t"))
         )
     }

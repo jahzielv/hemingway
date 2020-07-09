@@ -1,3 +1,4 @@
+use ansi_term::Style;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use feed_rs::parser;
@@ -113,7 +114,11 @@ async fn top5<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Error>> {
             for (j, e) in entries {
                 if j < 5 {
                     let e_title = e.title.as_ref().unwrap();
-                    it.push(format!("{} \n\t  🔗 {}", e_title.content.clone(), e.id));
+                    it.push(format!(
+                        "{} \n\t  {}\n",
+                        Style::new().italic().paint(e_title.content.clone()),
+                        e.id
+                    ));
                 }
             }
 
@@ -183,7 +188,7 @@ async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Er
                 let entry_duration = last_accessed - e.updated.unwrap();
                 if j < 5 && entry_duration.num_seconds() < 0 {
                     let e_title = e.title.as_ref().unwrap();
-                    it.push(format!("{} \n\t🔗 {}", e_title.content.clone(), e.id));
+                    it.push(format!("{} \n\t  {}\n", e_title.content.clone(), e.id));
                 }
             }
 
