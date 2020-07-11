@@ -208,10 +208,6 @@ async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Er
             let mut entry_date;
             for (j, e) in entries {
                 if e.updated.is_none() {
-                    // println!(
-                    //     "{} has no date info",
-                    //     e.title.as_ref().unwrap().content.clone()
-                    // );
                     entry_date = e.published.unwrap();
                 } else {
                     entry_date = e.updated.unwrap();
