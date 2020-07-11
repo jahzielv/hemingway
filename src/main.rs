@@ -184,33 +184,47 @@ async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Er
         let last_accessed = DateTime::from(
             DateTime::parse_from_rfc3339(&config_obj.feeds[i].last_accessed).unwrap(),
         );
-        let feed_updates = feed.updated;
-        if feed_updates.is_none() {
-            eprintln!(
-                "{}: no update data available for this feed",
-                feed.title.unwrap().content
-            );
-            config_obj.feeds[i].last_accessed = Utc::now().to_rfc3339().to_owned();
-            continue;
-        }
-        let duration = last_accessed - feed_updates.unwrap();
-        if duration.num_seconds() > 0 {
-            println!("{}: Nothing new here...", feed.title.unwrap().content);
-            config_obj.feeds[i].last_accessed = Utc::now().to_rfc3339().to_owned();
-            continue;
-        }
+        // let feed_updates = feed.updated;
+        // if feed_updates.is_none() {
+        //     eprintln!(
+        //         "{}: no update data available for this feed",
+        //         feed.title.unwrap().content
+        //     );
+        //     config_obj.feeds[i].last_accessed = Utc::now().to_rfc3339().to_owned();
+        //     continue;
+        // }
+        // let duration = last_accessed - feed_updates.unwrap();
+        // if duration.num_seconds() > 0 {
+        //     println!("{}: Nothing new here...", feed.title.unwrap().content);
+        //     config_obj.feeds[i].last_accessed = Utc::now().to_rfc3339().to_owned();
+        //     continue;
+        // }
         let procfeed = {
             let title = feed.title.unwrap();
             let title_owned = title.content.to_owned();
 
             let entries = feed.entries.iter().enumerate();
             let mut it = Vec::<String>::new();
+            let mut entry_date;
             for (j, e) in entries {
-                let entry_duration = last_accessed - e.updated.unwrap();
+                if e.updated.is_none() {
+                    // println!(
+                    //     "{} has no date info",
+                    //     e.title.as_ref().unwrap().content.clone()
+                    // );
+                    entry_date = e.published.unwrap();
+                } else {
+                    entry_date = e.updated.unwrap();
+                }
+                let entry_duration = last_accessed - entry_date; //e.updated.unwrap();
                 if j < 10 && entry_duration.num_seconds() < 0 {
                     let e_title = e.title.as_ref().unwrap();
                     it.push(format!("{} \n\t  {}\n", e_title.content.clone(), e.id));
                 }
+            }
+
+            if it.len() == 0 {
+                it.push(format!("Nothing new here..."));
             }
 
             ProcessedFeed {
