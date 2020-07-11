@@ -24,12 +24,15 @@ struct Cli {
 #[derive(StructOpt, Debug)]
 enum Cmd {
     /// Adds the feed URL passed to it to your feeds list.
-    Add { feed_url: String },
+    Add {
+        feed_url: String,
+    },
 
     Top {
         #[structopt(default_value = "1")]
         post_num: usize,
     },
+    List,
 }
 #[derive(Debug, Serialize, Deserialize)]
 struct Feed {
@@ -69,6 +72,13 @@ fn add_feed(feed: &str) {
         last_accessed: Utc::now().to_rfc3339().to_owned(),
     });
     rust_to_config(serde_json::to_string(&my_feeds).unwrap().as_bytes());
+}
+
+fn list_feeds() {
+    let my_feeds: ConfigObj = config_to_rust();
+    for f in my_feeds.feeds {
+        println!("{}", f.uri);
+    }
 }
 
 async fn top<'a>(num: usize) -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Error>> {
@@ -174,7 +184,16 @@ async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Er
         let last_accessed = DateTime::from(
             DateTime::parse_from_rfc3339(&config_obj.feeds[i].last_accessed).unwrap(),
         );
-        let duration = last_accessed - feed.updated.unwrap();
+        let feed_updates = feed.updated;
+        if feed_updates.is_none() {
+            eprintln!(
+                "{}: no update data available for this feed",
+                feed.title.unwrap().content
+            );
+            config_obj.feeds[i].last_accessed = Utc::now().to_rfc3339().to_owned();
+            continue;
+        }
+        let duration = last_accessed - feed_updates.unwrap();
         if duration.num_seconds() > 0 {
             println!("{}: Nothing new here...", feed.title.unwrap().content);
             config_obj.feeds[i].last_accessed = Utc::now().to_rfc3339().to_owned();
@@ -188,7 +207,7 @@ async fn process_feed<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Er
             let mut it = Vec::<String>::new();
             for (j, e) in entries {
                 let entry_duration = last_accessed - e.updated.unwrap();
-                if j < 5 && entry_duration.num_seconds() < 0 {
+                if j < 10 && entry_duration.num_seconds() < 0 {
                     let e_title = e.title.as_ref().unwrap();
                     it.push(format!("{} \n\t  {}\n", e_title.content.clone(), e.id));
                 }
@@ -225,10 +244,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             match &i {
                 Cmd::Add { feed_url } => add_feed(feed_url),
                 Cmd::Top { post_num } => {
-                    let top5_entries = top(*post_num).await?;
-                    for e in top5_entries {
+                    let top_entries = top(*post_num).await?;
+                    for e in top_entries {
                         println!("{}", e);
                     }
+                }
+                Cmd::List => {
+                    list_feeds();
                 }
             };
             Some(i)
