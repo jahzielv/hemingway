@@ -24,10 +24,12 @@ struct Cli {
 #[derive(StructOpt, Debug)]
 enum Cmd {
     /// Adds the feed URL passed to it to your feeds list.
-    Add {
-        feed_url: String,
+    Add { feed_url: String },
+
+    Top {
+        #[structopt(default_value = "1")]
+        post_num: usize,
     },
-    Top5,
 }
 #[derive(Debug, Serialize, Deserialize)]
 struct Feed {
@@ -69,7 +71,7 @@ fn add_feed(feed: &str) {
     rust_to_config(serde_json::to_string(&my_feeds).unwrap().as_bytes());
 }
 
-async fn top5<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Error>> {
+async fn top<'a>(num: usize) -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Error>> {
     let config_path = find_config();
     let mut processed: Vec<ProcessedFeed> = Vec::new();
     let config = match fs::read_to_string(&config_path) {
@@ -112,7 +114,7 @@ async fn top5<'a>() -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Error>> {
             let entries = feed.entries.iter().enumerate();
             let mut it = Vec::<String>::new();
             for (j, e) in entries {
-                if j < 5 {
+                if j < num {
                     let e_title = e.title.as_ref().unwrap();
                     it.push(format!(
                         "{} \n\t  {}\n",
@@ -222,8 +224,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(i) => {
             match &i {
                 Cmd::Add { feed_url } => add_feed(feed_url),
-                Cmd::Top5 => {
-                    let top5_entries = top5().await?;
+                Cmd::Top { post_num } => {
+                    let top5_entries = top(*post_num).await?;
                     for e in top5_entries {
                         println!("{}", e);
                     }
