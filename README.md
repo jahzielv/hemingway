@@ -2,6 +2,10 @@
 
 An economical RSS reader for your terminal. I needed an RSS feed reader and I'm learning Rust, so I decided to build one myself. Hemingway aims to be minimal and easy to use.
 
+## Updates
+
+Check the [changelog](/CHANGELOG)!
+
 ## Misc.
 
 Hemingway stores your feeds list in a `.hemrc` file in your home directory. This file is in JSON format, mostly because it's easy to work with. Hemingway will create the `.hemrc` file the first time you run it.
@@ -24,10 +28,10 @@ $ hem
 
 > 👉 Heads up! This will create a `.hemrc` in your home folder if the file doesn't exist (ie you're running Hemingway for the first time).
 
-### Display 5 newest articles from all your feeds
+### Display `n` newest articles from all your feeds (defaults to 1)
 
 ```bash
-$ hem top5
+$ hem top 3 # shows the 3 newest articles from all feeds
 ```
 
 ### Add a feed
@@ -36,9 +40,8 @@ $ hem top5
 $ hem add https://example.com/feed.xml
 ```
 
-TODO:
-- [ ] add tests
-- [ ] improve UI (maybe show in a grid? maybe have linked titles?)
-- [ ] fix bug where you won't see anything new right after adding a feed
-- [ ] rework `top5`command to take an arg and show that number of posts per feed
-- [ ] make it faster? find a way to benchmark
+### List out your saved feeds
+
+```bash
+$ hem list
+```
