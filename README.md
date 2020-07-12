@@ -24,10 +24,10 @@ $ hem
 
 > 👉 Heads up! This will create a `.hemrc` in your home folder if the file doesn't exist (ie you're running Hemingway for the first time).
 
-### Display 5 newest articles from all your feeds
+### Display `n` newest articles from all your feeds (defaults to 1)
 
 ```bash
-$ hem top5
+$ hem top 3 # shows the 3 newest articles from all feeds
 ```
 
 ### Add a feed
@@ -36,9 +36,15 @@ $ hem top5
 $ hem add https://example.com/feed.xml
 ```
 
+### List out your saved feeds
+
+```bash
+$ hem list
+```
+
 TODO:
-- [ ] add tests
-- [ ] improve UI (maybe show in a grid? maybe have linked titles?)
-- [ ] fix bug where you won't see anything new right after adding a feed
-- [ ] rework `top5`command to take an arg and show that number of posts per feed
-- [ ] make it faster? find a way to benchmark
+
+-   [ ] add tests
+-   [x] improve UI (maybe show in a grid? maybe have linked titles?)
+-   [x] rework `top5` command to take an arg and show that number of posts per feed
+-   [ ] make it faster? find a way to benchmark
