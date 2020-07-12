@@ -22,14 +22,16 @@ struct Cli {
 #[derive(StructOpt, Debug)]
 enum Cmd {
     /// Adds the feed URL passed to it to your feeds list.
-    Add {
-        feed_url: String,
-    },
+    Add { feed_url: String },
 
+    /// Prints out a given number of each feed's newest entries.
     Top {
         #[structopt(default_value = "1")]
-        post_num: usize,
+        ///The number of newest entries to display per feed.
+        num_entries: usize,
     },
+
+    /// Lists out your saved feeds.
     List,
 }
 
@@ -202,8 +204,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(i) => {
             match &i {
                 Cmd::Add { feed_url } => add_feed(feed_url),
-                Cmd::Top { post_num } => {
-                    let top_entries = top(*post_num).await?;
+                Cmd::Top { num_entries } => {
+                    let top_entries = top(*num_entries).await?;
                     for e in top_entries {
                         println!("{}", e);
                     }
