@@ -93,7 +93,7 @@ pub fn remove() {
         .interact()
         .unwrap();
 
-    println!("{:?}", selections);
+    // println!("{:?}", selections);
     if selections.is_empty() {
         println!("You did not select anything :(");
     } else {
@@ -104,7 +104,7 @@ pub fn remove() {
             config.feeds.remove(selection);
         }
     }
-    println!("{:?}", config);
+    rust_to_config(serde_json::to_string(&config).unwrap().as_bytes())
 }
 
 pub async fn top<'a>(num: usize) -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Error>> {
