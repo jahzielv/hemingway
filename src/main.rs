@@ -1,4 +1,4 @@
-use hemlib::{add_feed, hem, list_feeds, top};
+use hemlib::{add_feed, hem, list_feeds, remove, top};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -24,6 +24,9 @@ enum Cmd {
 
     /// Lists out your saved feeds.
     List,
+
+    /// Remove a saved feed
+    Remove,
 }
 
 // access feeds
@@ -52,6 +55,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Cmd::List => {
                     list_feeds();
+                }
+                Cmd::Remove => {
+                    remove();
                 }
             };
             Some(i)

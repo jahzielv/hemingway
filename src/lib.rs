@@ -1,6 +1,7 @@
 use ansi_term::Style;
 use chrono::offset::Utc;
 use chrono::DateTime;
+use dialoguer::{theme::SimpleTheme, MultiSelect};
 use feed_rs::parser;
 use itertools::Itertools;
 use reqwest::Client;
@@ -70,10 +71,40 @@ pub fn add_feed(feed: &str) {
 }
 
 pub fn list_feeds() {
-    let my_feeds: ConfigObj = config_to_rust();
-    for f in my_feeds.feeds {
+    let config: ConfigObj = config_to_rust();
+    // let mut uris: Vec<String> = Vec::new();
+    for f in config.feeds {
         println!("{}", f.uri);
+        // uris.push(f.uri);
     }
+    // uris
+}
+pub fn remove() {
+    let mut config: ConfigObj = config_to_rust();
+    let mut uris: Vec<String> = Vec::new();
+    let feeds_list = &config.feeds;
+    for f in feeds_list {
+        uris.push(f.uri.clone());
+    }
+    let multiselected = uris;
+    let mut selections = MultiSelect::with_theme(&SimpleTheme)
+        .with_prompt("Use arrow keys to move up or down. Press the space bar to select a feed. Press enter when you're done to remove all selected feeds")
+        .items(&multiselected[..])
+        .interact()
+        .unwrap();
+
+    println!("{:?}", selections);
+    if selections.is_empty() {
+        println!("You did not select anything :(");
+    } else {
+        println!("Removing these feeds:");
+        selections.reverse();
+        for selection in selections {
+            println!("  {}", multiselected[selection]);
+            config.feeds.remove(selection);
+        }
+    }
+    println!("{:?}", config);
 }
 
 pub async fn top<'a>(num: usize) -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Error>> {
