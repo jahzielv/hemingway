@@ -144,8 +144,10 @@ async fn read_feed(
                 processed_items.push(format!(
                     "{} \n\t  {}\n",
                     Style::new().italic().paint(e_title.content.clone()),
-                    e.id
+                    e.links[0].href
                 ));
+            } else {
+                break;
             }
         }
 
@@ -181,7 +183,13 @@ async fn read_feed_duration(
             let entry_duration = last_accessed - entry_date; //e.updated.unwrap();
             if j < 5 && entry_duration.num_seconds() < 0 {
                 let e_title = e.title.as_ref().unwrap();
-                processed_items.push(format!("{} \n\t  {}\n", e_title.content.clone(), e.id));
+                processed_items.push(format!(
+                    "{} \n\t  {}\n",
+                    Style::new().italic().paint(e_title.content.clone()),
+                    e.links[0].href
+                ));
+            } else {
+                break;
             }
         }
 
@@ -208,6 +216,7 @@ pub async fn top<'a>(num: usize) -> Result<Vec<ProcessedFeed>, Box<dyn std::erro
         ));
     };
     let bar = ProgressBar::new(u64::try_from(config_obj.feeds.len()).unwrap());
+    // bar.println("Loading feeds...");
 
     for i in 0..config_obj.feeds.len() {
         let proc_feed = read_feed(&config_obj.feeds[i].uri, &client, num).await?;
