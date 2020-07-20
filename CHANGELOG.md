@@ -12,12 +12,25 @@ TODO:
 -   [ ] add tests
 -   [ ] make it faster? find a way to benchmark
 
+## [0.7.0] - 2020-07-20
+
+### Added
+
+-   The `remove` command: lets you select feeds and remove them.
+-   Loading indicators, courtesy of [indicatif](https://docs.rs/indicatif/0.15.0/indicatif/).
+
+## Fixed
+
+-   Refactored the two main functions! Extracted the logic of processing an individual feed to separate functions.
+-   Refactored `config_to_rust` utility function so that it handles case where there is no .hemrc.
+-   Switched to using the `<link>` tag instead of the item's `id` for getting the item's URI. Some feeds place an actual GUID in the `id` instead of a URI; `link` is more consistent.
+
 ## [0.6.0] - 2020-07-11
 
 ### Added
 
 -   The `list` command: list out your saved RSS/Atom feeds
--   `top <numfeeds>`: the `top` command has replaced the `top5` command. You can now pass in however many entries you want to list for each of your feeds. Defaults to 1 per feed.
+-   `top <num_items>`: the `top` command has replaced the `top5` command. You can now pass in however many entries you want to list for each of your feeds. Defaults to 1 per feed.
 -   This changelog!
 
 ### Deprecated
