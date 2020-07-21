@@ -1,6 +1,6 @@
 # Hemingway
 
-An economical RSS reader for your terminal. I needed an RSS feed reader and I'm learning Rust, so I decided to build one myself. Hemingway aims to be minimal and easy to use.
+An economical RSS reader for your terminal. I needed an RSS feed reader and I'm learning Rust, so I decided to build one myself. Hemingway aims to be small and easy to use.
 
 ## Updates
 
@@ -39,6 +39,14 @@ $ hem top 3 # shows the 3 newest articles from all feeds
 ```bash
 $ hem add https://example.com/feed.xml
 ```
+
+### Remove feeds
+
+```bash
+$ hem remove
+```
+
+Lists out all your feeds. Move up and down the list with the arrow keys, select feeds with the space bar. Click `enter` to delete selected feeds.
 
 ### List out your saved feeds
 
