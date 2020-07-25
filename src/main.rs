@@ -1,4 +1,4 @@
-use hemlib::{add_feed, hem, list_feeds, remove, top};
+use hemlib::{add_feed, hem, list_feeds, read_feed_fast, remove, top};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -35,6 +35,7 @@ enum Cmd {
 // update last_access date in config
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
     let args = Cli::from_args();
     match args.sub_cmd {
         None => {
@@ -48,7 +49,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             match &i {
                 Cmd::Add { feed_url } => add_feed(feed_url),
                 Cmd::Top { num_entries } => {
-                    let top_entries = top(*num_entries).await?;
+                    // let top_entries = top(*num_entries).await?;
+                    // for e in top_entries {
+                    //     println!("{}", e);
+                    // }
+                    let top_entries = read_feed_fast(*num_entries).await?;
                     for e in top_entries {
                         println!("{}", e);
                     }

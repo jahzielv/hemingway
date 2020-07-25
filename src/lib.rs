@@ -3,17 +3,19 @@ use chrono::offset::Utc;
 use chrono::DateTime;
 use dialoguer::{theme::SimpleTheme, MultiSelect};
 use feed_rs::parser;
+use futures::stream::StreamExt;
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::convert::TryFrom;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ProcessedFeed {
     pub title: String,
     pub items: Vec<String>,
@@ -123,6 +125,63 @@ pub fn remove() {
         }
     }
     rust_to_config(serde_json::to_string(&config).unwrap().as_bytes())
+}
+
+pub async fn read_feed_fast(num: usize) -> Result<Vec<ProcessedFeed>, Box<dyn std::error::Error>> {
+    let client = &Client::builder().build()?;
+
+    let config_obj = config_to_rust().unwrap();
+    if config_obj.feeds.len() == 0 {
+        return Err(Box::from(
+            "Your feeds list is empty! use `hem add` to add a feed.",
+        ));
+    };
+    let processed = RefCell::new(Vec::<ProcessedFeed>::new());
+    let fetches = futures::stream::iter(config_obj.feeds.into_iter().map(|feed| {
+        let y = &processed;
+        async move {
+            match client.get(&feed.uri).send().await {
+                Ok(resp) => match resp.text().await {
+                    Ok(text) => {
+                        let feed = parser::parse(text.as_bytes()).unwrap();
+                        let title = feed.title.unwrap();
+                        let title_owned = title.content.to_owned();
+
+                        let entries = feed.entries.iter().enumerate();
+                        let mut processed_items = Vec::<String>::new();
+                        for (j, e) in entries {
+                            if j < num {
+                                let e_title = e.title.as_ref().unwrap();
+                                processed_items.push(format!(
+                                    "{} \n\t  {}\n",
+                                    Style::new().italic().paint(e_title.content.clone()),
+                                    e.links[0].href
+                                ));
+                            } else {
+                                break;
+                            }
+                        }
+                        let feed_to_add = ProcessedFeed {
+                            title: title_owned,
+                            items: processed_items,
+                        };
+                        y.borrow_mut().push(feed_to_add);
+                    }
+                    Err(_) => {
+                        println!("ERROR reading {}", feed.uri);
+                    }
+                },
+                Err(_) => {
+                    println!("ERROR reading {}", feed.uri);
+                }
+            };
+        }
+    }))
+    .buffer_unordered(20)
+    .collect::<Vec<()>>();
+    fetches.await;
+    let x = processed.borrow();
+    Ok(x.to_vec())
 }
 
 async fn read_feed(
