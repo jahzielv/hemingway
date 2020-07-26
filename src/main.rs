@@ -1,4 +1,4 @@
-use hemlib::{add_feed, hem, list_feeds, read_feed_fast, remove, top};
+use hemlib::{add_feed, list_feeds, read_feed_fast, read_feed_fast_duration, remove};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::from_args();
     match args.sub_cmd {
         None => {
-            let processed = hem().await?;
+            let processed = read_feed_fast_duration().await?; //hem().await?;
             for e in processed {
                 println!("{}", e);
             }
