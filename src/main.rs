@@ -35,7 +35,6 @@ enum Cmd {
 // update last_access date in config
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init();
     let args = Cli::from_args();
     match args.sub_cmd {
         None => {
