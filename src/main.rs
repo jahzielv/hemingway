@@ -1,4 +1,4 @@
-use hemlib::{add_feed, hem, list_feeds, remove, top};
+use hemlib::{add_feed, list_feeds, read_feed_fast, read_feed_fast_duration, remove};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::from_args();
     match args.sub_cmd {
         None => {
-            let processed = hem().await?;
+            let processed = read_feed_fast_duration().await?; //hem().await?;
             for e in processed {
                 println!("{}", e);
             }
@@ -48,7 +48,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             match &i {
                 Cmd::Add { feed_url } => add_feed(feed_url),
                 Cmd::Top { num_entries } => {
-                    let top_entries = top(*num_entries).await?;
+                    // let top_entries = top(*num_entries).await?;
+                    // for e in top_entries {
+                    //     println!("{}", e);
+                    // }
+                    let top_entries = read_feed_fast(*num_entries).await?;
                     for e in top_entries {
                         println!("{}", e);
                     }

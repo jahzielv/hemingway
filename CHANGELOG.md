@@ -5,12 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.1]
 
-TODO:
+### Changed
 
--   [ ] add tests
--   [ ] make it faster? find a way to benchmark
+-   Revamped the feed fetching code by using future streams. Saw speedups of around 70% (~7 seconds for 14 feeds to ~2 seconds)! Big thanks to Pat Shaughnessy for his [blog post](http://patshaughnessy.net/2020/1/20/downloading-100000-files-using-async-rust) on downloading files in parallel with async Rust!
 
 ## [0.7.0] - 2020-07-20
 
