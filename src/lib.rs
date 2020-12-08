@@ -1,4 +1,5 @@
 use ansi_term::Style;
+use anyhow::{Context, Result};
 use chrono::offset::Utc;
 use chrono::DateTime;
 use dialoguer::{theme::SimpleTheme, MultiSelect};
@@ -68,7 +69,12 @@ fn config_to_rust() -> Result<ConfigObj, Box<dyn std::error::Error>> {
             }
         }
     };
-    Ok(serde_json::from_str(&config).unwrap())
+    match serde_json::from_str(&config) {
+        Ok(c) => Ok(c),
+        Err(_) => Err(Box::from(
+            "Failure to convert JSON config string to Rust struct.",
+        )),
+    }
 }
 
 pub fn rust_to_config(content: &[u8]) {
@@ -81,15 +87,18 @@ pub fn rust_to_config(content: &[u8]) {
 }
 
 pub fn add_feed(feed: &str) {
+    // Ok because we can't really recover if the config is messed up somehow
     let mut my_feeds: ConfigObj = config_to_rust().unwrap();
     my_feeds.feeds.push(Feed {
         uri: feed.to_owned(),
         last_accessed: Utc::now().to_rfc3339().to_owned(),
     });
+    // Ok because this shouldn't ever panic
     rust_to_config(serde_json::to_string(&my_feeds).unwrap().as_bytes());
 }
 
 pub fn list_feeds() {
+    // Ok because we can't recover if config is messed up
     let config: ConfigObj = config_to_rust().unwrap();
     // let mut uris: Vec<String> = Vec::new();
     for f in config.feeds {
@@ -218,10 +227,23 @@ pub async fn read_feed_fast_duration() -> Result<Vec<ProcessedFeed>, Box<dyn std
             match client.get(&config_feed.uri).send().await {
                 Ok(resp) => match resp.text().await {
                     Ok(text) => {
-                        let feed = parser::parse(text.as_bytes()).unwrap();
-                        let last_accessed_parsed = DateTime::from(
-                            DateTime::parse_from_rfc3339(&config_feed.last_accessed).unwrap(),
-                        );
+                        let feed = match parser::parse(text.as_bytes()) {
+                            Err(_) => {
+                                eprintln!("Invalid RSS feed found at {}", config_feed.uri);
+                                return ();
+                            }
+                            Ok(f) => f,
+                        };
+                        let last_acc_date =
+                            match DateTime::parse_from_rfc3339(&config_feed.last_accessed) {
+                                Err(e) => {
+                                    eprintln!("Bad date formatting for {}", config_feed.uri);
+                                    return ();
+                                }
+                                Ok(l) => l,
+                            };
+
+                        let last_accessed_parsed = DateTime::from(last_acc_date);
                         let title = feed.title.unwrap();
                         let title_owned = title.content.to_owned();
 
