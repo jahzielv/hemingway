@@ -218,7 +218,16 @@ pub async fn read_feed_fast_duration() -> Result<Vec<ProcessedFeed>, Box<dyn std
             match client.get(&config_feed.uri).send().await {
                 Ok(resp) => match resp.text().await {
                     Ok(text) => {
-                        let feed = parser::parse(text.as_bytes()).unwrap();
+                        let feed = match parser::parse(text.as_bytes()) {
+                            Ok(f) => f,
+                            Err(e) => {
+                                println!(
+                                    "❌ Oops! Couldn't read {}\n\tError message: {}",
+                                    config_feed.uri, e
+                                );
+                                return;
+                            }
+                        };
                         let last_accessed_parsed = DateTime::from(
                             DateTime::parse_from_rfc3339(&config_feed.last_accessed).unwrap(),
                         );
